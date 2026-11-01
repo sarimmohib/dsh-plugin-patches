@@ -27,7 +27,7 @@ powershell -ExecutionPolicy Bypass -File patches\reapply-free-web-search.ps1
 
 ## What the free-web-search patches change
 
-Four edits, each a small textual patch (see `patches/patch-free-web-search-*.mjs`):
+Five edits, each a small textual patch (see `patches/patch-free-web-search-*.mjs`):
 
 1. **`unwrapVolatile`** — unwraps the volatile settings wrapper so the settings card
    reads plain values instead of the wrapper object.
@@ -36,6 +36,28 @@ Four edits, each a small textual patch (see `patches/patch-free-web-search-*.mjs
 3. **`.volatile()`** — applies volatile semantics to the settings descriptor.
 4. **`SettingsConflictError`** — imports the real error type instead of falling
    through to a generic throw.
+5. **Command `description` thunk** — the plugin registered its command with a plain
+   string, but the host builds menu rows with `contribution.description()` and calls
+   it. The call threw `TypeError: contribution.description is not a function`, so
+   `candidates()` rejected and **the entire command candidate list failed**: the `+`
+   button in the composer opened nothing and typing `/` showed no menu. Typing a
+   command name directly still worked, which made the symptom look unrelated.
+   Fixed by registering `description: () => "…"`.
+
+### The `+` button is dead — symptom to cause
+
+If the composer's `+` button and the `/` menu both do nothing, while a directly typed
+command (e.g. `/goal`) still runs, the command candidate list is throwing. Confirm it
+in the browser console:
+
+```
+[ui-input-trigger] source "command" candidates failed: TypeError: contribution.description is not a function
+```
+
+Any `commandUi.register({ … })` contribution in any plugin can cause this by passing a
+string where the host expects a function. `patches/patch-free-web-search-command-description.mjs`
+fixes the one in this plugin, and `reapply-free-web-search.ps1` now asserts the thunk is
+present so a regression fails loudly instead of silently killing the menu.
 
 The bundle patch also changes the default provider:
 

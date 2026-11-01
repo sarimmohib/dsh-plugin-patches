@@ -698,7 +698,7 @@ function apply(ctx) {
 		sctx.effect(() => {
 			return command.register({
 				name: "free-search-engine",
-				description: "Switch web search engine",
+				description: () => "Switch web search engine",
 				available: () => true,
 				ui: {
 					kind: "popupSelect",
